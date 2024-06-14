@@ -44,7 +44,7 @@ class SGUReport():
         username = self._config.get('username', '')
         ignored_tag = self._config.get('ignored_tag', self._default_ignore_tag)
         default_tag = self._config.get('default_tag', '')
-        processed_data = []
+        processed_data = {}
 
         for entry in data:
             # Check if entry is a valid entry
@@ -55,18 +55,31 @@ class SGUReport():
             else:
                 categ = default_tag
 
-            processed_data.append({
-                'DATA': dt.datetime.fromisoformat(entry['start']).strftime("%d/%m/%Y"),
-                'PROJETO': entry['project'],
-                'CATEGORIA': categ,
-                'ATIVIDADE': entry['description'][:self._max_num_chars],
-                'CARD_KEY': '',
-                'HORAS': str(float(entry['dur']) / 3600000).replace('.', ','),
-                'USERNAME': username
-            })
+            key = (
+                dt.datetime.fromisoformat(entry['start']).strftime("%d/%m/%Y"),
+                entry['project'],
+                categ,
+                entry['description'][:self._max_num_chars],
+                '',
+                username
+            )
 
-        return processed_data
+            if key not in processed_data:
+                processed_data[key] = 0.0
+            processed_data[key] += float(entry['dur'])
 
+        return [
+            {
+                'DATA': key[0],
+                'PROJETO': key[1],
+                'CATEGORIA': key[2],
+                'ATIVIDADE': key[3],
+                'CARD_KEY': key[4],
+                'HORAS': str(value / 3600000).replace('.', ','),
+                'USERNAME': key[5]
+            }
+            for key, value in processed_data.items()
+        ] 
 
 def register(register_function: Callable, name: str) -> None:
     """ Register plugin """
